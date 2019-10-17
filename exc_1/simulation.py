@@ -1,8 +1,22 @@
+# TODO: add a correct way of checking if necessary modules are installed
+
+# Import all necessary modules
 import numpy as np
 from math import exp
-
 import matplotlib
 import matplotlib.pyplot as plt
+import scipy.stats
+
+
+# External function to check if pack installed in Python
+def check_if_pack_installed(pack_name):
+    try:
+        return __import__(pack_name)
+        #importlib.import_module(full_module_name)
+    except ImportError:
+        raise Exception("The package "+pack_name+" needs to be installed.")
+
+
 
 class Simulation:
 
@@ -12,7 +26,7 @@ class Simulation:
     x = []
 
     # List of names of physical variables of the system
-    varnames = ['S_E']
+    varnames = ['S_E', 'wave_function']
 
     # List of names of the pdfs available for choosing
     distnames = ['gaussian']
@@ -24,6 +38,7 @@ class Simulation:
     def __init__(self, params):
         self.N = params['N']
         self.w = params['w']
+        self.burn_in = params['burn_in']
         if 'rnd_seed' in params:
             self.rnd_seed = params['rnd_seed']
             np.random.seed(self.rnd_seed)
@@ -80,15 +95,13 @@ class Simulation:
             else:
                 self.x.append( np.copy( self.x[len(self.x)-1] ) )
                 self.S_E.append( self.S_E[len(self.S_E)-1] )
-                #print("SAME")
 
 
     def run(self, mc_steps, prop_dist):
-        #print("overall simulation:")
-        
         for i in range(mc_steps):
             self.run_one_step(prop_dist)
-            #print(self.x)
+
+        self.x = np.array(self.x)
 
 
     def plot(self, varname, filename, run_setup):
@@ -96,15 +109,41 @@ class Simulation:
         if varname not in self.varnames:
             raise Exception("The variable chosen to plot doesn't correspond to a system variable.")
         
-        fig, ax = plt.subplots()
-        
-        ax.plot(range(len(self.S_E)), self.S_E)
-        
-        ax.grid()
+        if varname=='S_E':
 
-        ax.set(xlabel='MC time', ylabel='S_E',
-               title='Using: '+'mc_steps='+str(run_setup['mc_steps'])+', N='+str(self.N)+', w='+str(self.w)+', prop dist='+run_setup['prop_dist'])
+            fig, ax = plt.subplots()
+            ax.plot(range(len(self.S_E)), self.S_E)
+            ax.grid()
 
-        fig.savefig(filename)
-        
-        fig.clf()
+            ax.set(xlabel='MC time', ylabel='S_E',
+                   title='Using: '+'mc_steps='+str(run_setup['mc_steps'])+', N='+str(self.N)+', w='+str(self.w)+', prop dist='+run_setup['prop_dist'])
+
+            fig.savefig(filename)
+            fig.clf()
+
+        elif varname=='wave_function':
+
+            buff_length1 = len(self.x)
+
+            # Flatten the whole self.x
+            self.x = np.ndarray.flatten(self.x)
+
+            # Make a histogram of the simulation-related data
+            plt.hist(self.x[self.burn_in*self.N:], normed=True, bins=40)
+
+            # Plot what QM predicts
+            x_min = -3.0
+            x_max = 3.0
+            mean = 0.0
+            std = 0.5
+            x_QM = np.linspace(x_min, x_max, 1000)
+            y_QM = scipy.stats.norm.pdf(x_QM, mean,std)
+            plt.plot(x_QM, y_QM, color='coral')
+
+            # Save output figure
+            plt.savefig(filename)
+
+            plt.clf()
+
+            # Setting position data to its original shape            
+            self.x = np.ndarray.reshape(self.x, (-1, buff_length1))
