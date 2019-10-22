@@ -25,11 +25,16 @@ class Simulation:
     # This will be an array with the values of x for each MC time
     x = []
 
+    # To use only in the case of the <gaussian_one> proposal distribution
+    x_single = []
+
     # List of names of physical variables of the system
     varnames = ['S_E', 'wave_function']
 
     # List of names of the pdfs available for choosing
     distnames = ['gaussian']
+    # List of proposal distributions
+    prop_dists = ['gaussian_all', 'gaussian_one']
     # Higher variance leads to a lower acc rate, due to an "unconnected" chain
     gauss_var = 0.1
 
@@ -72,15 +77,15 @@ class Simulation:
 
         return S_E
 
-    def run_one_step(self, prop_dist):
+    def run_one_step(self, prop_dist, i):
         #print("running one MC step ... ")
 
-        if prop_dist not in self.distnames:
+        if prop_dist not in self.prop_dists:
             raise Exception("Distribution chosen not available.")
 
         # TODO: refactor the following if-code, generalize
 
-        if prop_dist=='gaussian':
+        if prop_dist=='gaussian_all':
 
             # 1. generate a candidate x' for the next sample: x' <--- g(x'|x_previous)
             x_p = np.random.normal( self.x[len(self.x)-1], self.gauss_var, self.N )
@@ -100,13 +105,42 @@ class Simulation:
                 self.x.append( np.copy( self.x[len(self.x)-1] ) )
                 self.S_E.append( self.S_E[len(self.S_E)-1] )
 
+        if prop_dist=='gaussian_one':
+
+            # TODO: the proper way of implementing this case is as follows:
+            #		1. instead of copying the whole previous x, store only the newly
+            #		   proposed element in the array
+            #		2. compute the change in S_E based on the change of this single entry
+            #		   of the array
+            #		3. when plotting the wave function, use only those values of x_single
+
+            # 1. generate a candidate x' for the next sample: x' <--- g(x'|x_previous)
+            #x_p = np.random.normal( self.x[len(self.x)-1], self.gauss_var, self.N )
+            x_p = np.copy( self.x[len(self.x)-1] )
+            x_p[ i%self.N ] = np.random.normal( self.x[len(self.x)-1][ i%self.N ], self.gauss_var, 1 )
+
+            # 2. compute the value of S_E for this new x'
+            buff_S_E = self.compute_S_E(x_p)
+        
+            # 3. compute the acceptance ratio
+            acc_ratio = exp(-buff_S_E) / exp(-self.S_E[len(self.S_E)-1])
+        
+            # 4. accept or reject
+            u = np.random.uniform(size=1)[0]
+            if u <= acc_ratio:
+                self.S_E.append( buff_S_E )
+                self.x.append( np.copy(x_p) )
+            else:
+                self.x.append( np.copy( self.x[len(self.x)-1] ) )
+                self.S_E.append( self.S_E[len(self.S_E)-1] )
+
 
     def run(self, mc_steps, prop_dist):
-        if mc_steps!=self.burn_in:
+        if mc_steps<=self.burn_in:
             raise Exception("Number of MC steps must be larger than burn-in.")
 
         for i in range(mc_steps):
-            self.run_one_step(prop_dist)
+            self.run_one_step(prop_dist, i)
 
         self.x = np.array(self.x)
 
@@ -136,7 +170,7 @@ class Simulation:
             self.x = np.ndarray.flatten(self.x)
 
             # Make a histogram of the simulation-related data
-            plt.hist(self.x[self.burn_in*self.N:], normed=True, bins=40)
+            plt.hist(self.x[self.burn_in*self.N:], density=True, bins=40)
 
             # Plot what QM predicts
             x_min = -3.0
@@ -157,5 +191,5 @@ class Simulation:
 
 
     def clean(self):
-        S_E = []
-        x = []
+        self.S_E = []
+        self.x = []
