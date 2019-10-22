@@ -35,7 +35,11 @@ class Simulation:
 
 
     # Default constructor
-    def __init__(self, params):
+    def __init__(self):
+        pass
+
+
+    def set_params(self, params):
         self.N = params['N']
         self.w = params['w']
         self.burn_in = params['burn_in']
@@ -98,6 +102,9 @@ class Simulation:
 
 
     def run(self, mc_steps, prop_dist):
+        if mc_steps!=self.burn_in:
+            raise Exception("Number of MC steps must be larger than burn-in.")
+
         for i in range(mc_steps):
             self.run_one_step(prop_dist)
 
@@ -147,3 +154,8 @@ class Simulation:
 
             # Setting position data to its original shape            
             self.x = np.ndarray.reshape(self.x, (-1, buff_length1))
+
+
+    def clean(self):
+        S_E = []
+        x = []
