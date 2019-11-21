@@ -11,8 +11,8 @@ sim = Simulation(sim_params)
 
 run_params = dict()
 run_params['burn_in'] = 3000
-run_params['mc_steps'] = 20003000
-run_params['skip_length'] = 100
+run_params['mc_steps'] = 100003000
+run_params['skip_length'] = 200
 
 # Generate Markov Chain configurations by using Metropolis
 sim.run(run_params)

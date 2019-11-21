@@ -2,6 +2,7 @@ import numpy as np
 
 from math import exp, log, acosh
 import matplotlib.pyplot as plt
+import sys
 
 
 """
@@ -89,17 +90,29 @@ class Simulation:
         mc_steps = params['mc_steps']
         skip_length = params['skip_length']
 
+        print("\nBurn-in...")
+
         # run thermalization, discard burn-in
         for i in range(burn_in):
             t = i%self.n_s
             x = (i/self.n_s)%self.n_t
             self.run_one_step(x,t)
 
+        print("...done.")
+
+        progr_prev = 0
         for i in range(mc_steps-burn_in):
             t = i%self.n_s
             x = (i/self.n_s)%self.n_t
             self.run_one_step(x,t)
-            
+
+            # print progress
+            progr = int((float(i) / float(mc_steps-burn_in))*100.0)
+            if progr>0 and progr!=progr_prev and progr%2==0:
+                print(str(progr)+"% ..."),
+                sys.stdout.flush()
+                progr_prev = progr
+
             # save configs
             if i%skip_length==0:
                 self.phi.append( np.copy(self.phi_buff) )
