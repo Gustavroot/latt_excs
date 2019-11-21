@@ -1,6 +1,6 @@
 import numpy as np
 
-from math import exp, log
+from math import exp, log, acosh
 import matplotlib.pyplot as plt
 
 
@@ -23,6 +23,9 @@ spatial (self.n_s), positive to the right << direction 1-hat >>
 class Simulation:
 
     phi = []
+    #phi_buff_old = []
+    #phi_buff_new = []
+    phi_buff = []
     S_E = []
     # phi in momentum, corresponding to a FT of phi
     phi_momentum = []
@@ -40,7 +43,8 @@ class Simulation:
         self.gauss_var = 0.1
 
         # Initial set of field values through Gaussian prior distribution
-        self.phi.append( np.random.normal(0, self.gauss_var, (self.n_s, self.n_t)) )
+        #self.buff_phi.append( np.random.normal(0, self.gauss_var, (self.n_s, self.n_t)) )
+        self.phi_buff = np.random.normal(0, self.gauss_var, (self.n_s, self.n_t))
 
 
     def compute_delta_action(self, phi, phi_val_prime, x, t):
@@ -68,20 +72,23 @@ class Simulation:
     def run_one_step(self, x, t):
         
         # 1. proposal
-        phi_prop = np.random.normal( self.phi[len(self.phi)-1][x,t], self.gauss_var, 1 )[0]
+        phi_prop = np.random.normal( self.phi_buff[x,t], self.gauss_var, 1 )[0]
         
         # 2. compute the change in action
-        delta_S_E = self.compute_delta_action( self.phi[len(self.phi)-1], phi_prop, x, t )
+        delta_S_E = self.compute_delta_action( self.phi_buff, phi_prop, x, t )
 
         # 3. acceptance ratio
         acc_ratio = exp( -delta_S_E )
 
         # 4. accept or reject
-        self.phi.append( np.copy(self.phi[len(self.phi)-1]) )
+        #self.buff_phi.append( np.copy(self.buff_phi[len(self.buff_phi)-1]) )
         u = np.random.uniform(size=1)[0]
         if u <= acc_ratio:
             #self.S_E.append( delta_S_E )
-            self.phi[len(self.phi)-1][x,t] = phi_prop
+            #self.buff_phi[len(self.buff_phi)-1][x,t] = phi_prop
+            #self.phi_buff_new = np.copy( self.phi_buff_old )
+            #self.phi_buff_new[x,t] = phi_prop
+            self.phi_buff[x,t] = phi_prop
         #else:
         #    #self.x.append( np.copy( self.x[len(self.x)-1] ) )
         #    #self.S_E.append( self.S_E[len(self.S_E)-1] )
@@ -94,17 +101,32 @@ class Simulation:
         mc_steps = params['mc_steps']
         skip_length = params['skip_length']
 
-        for i in range(mc_steps-1):
+        # run thermalization
+        for i in range(burn_in):
             t = i%self.n_s
             x = (i/self.n_s)%self.n_t
             self.run_one_step(x,t)
 
-        # applying burn-in and reducing correlation
-        y = []
-        for i in range(burn_in, mc_steps, skip_length):
-            y.append( np.copy(self.phi[i]) )
+        # discard burn-in
+        #self.phi = [self.buff_phi[len(self.buff_phi)-1]]
+        #self.buff_phi = []
+        #self.buff_phi.append( self.phi[len(self.phi)-1] )
 
-        self.phi = y
+        for i in range(mc_steps-burn_in):
+            t = i%self.n_s
+            x = (i/self.n_s)%self.n_t
+            self.run_one_step(x,t)
+            
+            # save configs
+            if i%skip_length==0:
+                self.phi.append( np.copy(self.phi_buff) )
+
+        # applying burn-in and reducing correlation
+        #y = []
+        #for i in range(burn_in, mc_steps, skip_length):
+        #    y.append( np.copy(self.phi[i]) )
+
+        #self.phi = y
         self.phi = np.array(self.phi)
 
 
@@ -152,12 +174,18 @@ class Simulation:
         #print(self.corrs)
 
 
-    def compute_eff_energies(self):
+    def compute_eff_energies(self, eff_en_type):
 
         for k in range(self.corrs.shape[0]):
             self.eff_energies.append( [] )
-            for j in range(self.corrs.shape[1]-1):
-                self.eff_energies[len(self.eff_energies)-1].append( log( self.corrs[k,j]/self.corrs[k,j+1] ) )
+            for j in range(1,self.corrs.shape[1]-1):
+
+                if eff_en_type=="exp":
+                    self.eff_energies[len(self.eff_energies)-1].append( log( self.corrs[k,j]/self.corrs[k,j+1] ) )
+                elif eff_en_type=="3pt":
+                    self.eff_energies[len(self.eff_energies)-1].append( acosh( (self.corrs[k,j+1]+self.corrs[k,j-1]) / (2*self.corrs[k,j]) ) )
+                else:
+                    raise Exception("Effective energy type not available.")
 
         self.eff_energies = np.array(self.eff_energies)
 

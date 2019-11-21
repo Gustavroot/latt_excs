@@ -11,7 +11,7 @@ sim = Simulation(sim_params)
 
 run_params = dict()
 run_params['burn_in'] = 3000
-run_params['mc_steps'] = 10003000
+run_params['mc_steps'] = 20003000
 run_params['skip_length'] = 100
 
 # Generate Markov Chain configurations by using Metropolis
@@ -20,7 +20,7 @@ sim.run(run_params)
 # post-processing
 sim.apply_ft()
 sim.compute_corrs()
-sim.compute_eff_energies()
+sim.compute_eff_energies("exp")
 
 # displaying results
 sim.plot("corrs", "corrs.png", run_params)
