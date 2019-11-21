@@ -23,8 +23,6 @@ spatial (self.n_s), positive to the right << direction 1-hat >>
 class Simulation:
 
     phi = []
-    #phi_buff_old = []
-    #phi_buff_new = []
     phi_buff = []
     S_E = []
     # phi in momentum, corresponding to a FT of phi
@@ -43,7 +41,6 @@ class Simulation:
         self.gauss_var = 0.1
 
         # Initial set of field values through Gaussian prior distribution
-        #self.buff_phi.append( np.random.normal(0, self.gauss_var, (self.n_s, self.n_t)) )
         self.phi_buff = np.random.normal(0, self.gauss_var, (self.n_s, self.n_t))
 
 
@@ -84,16 +81,7 @@ class Simulation:
         #self.buff_phi.append( np.copy(self.buff_phi[len(self.buff_phi)-1]) )
         u = np.random.uniform(size=1)[0]
         if u <= acc_ratio:
-            #self.S_E.append( delta_S_E )
-            #self.buff_phi[len(self.buff_phi)-1][x,t] = phi_prop
-            #self.phi_buff_new = np.copy( self.phi_buff_old )
-            #self.phi_buff_new[x,t] = phi_prop
             self.phi_buff[x,t] = phi_prop
-        #else:
-        #    #self.x.append( np.copy( self.x[len(self.x)-1] ) )
-        #    #self.S_E.append( self.S_E[len(self.S_E)-1] )
-
-        #self.S_E.append( self.compute_action(self.phi[len(self.phi)-1]) )
 
 
     def run(self, params):
@@ -101,16 +89,11 @@ class Simulation:
         mc_steps = params['mc_steps']
         skip_length = params['skip_length']
 
-        # run thermalization
+        # run thermalization, discard burn-in
         for i in range(burn_in):
             t = i%self.n_s
             x = (i/self.n_s)%self.n_t
             self.run_one_step(x,t)
-
-        # discard burn-in
-        #self.phi = [self.buff_phi[len(self.buff_phi)-1]]
-        #self.buff_phi = []
-        #self.buff_phi.append( self.phi[len(self.phi)-1] )
 
         for i in range(mc_steps-burn_in):
             t = i%self.n_s
@@ -121,12 +104,6 @@ class Simulation:
             if i%skip_length==0:
                 self.phi.append( np.copy(self.phi_buff) )
 
-        # applying burn-in and reducing correlation
-        #y = []
-        #for i in range(burn_in, mc_steps, skip_length):
-        #    y.append( np.copy(self.phi[i]) )
-
-        #self.phi = y
         self.phi = np.array(self.phi)
 
 
@@ -148,8 +125,6 @@ class Simulation:
         for i in range(self.phi_momentum.shape[0]):
             self.phi_momentum[i] = np.transpose(self.phi_momentum[i])
 
-        #print(self.phi_momentum[0,:,0])
-
 
     def compute_corrs(self):
 
@@ -159,19 +134,12 @@ class Simulation:
             # run over values of time t
             for j in range(self.phi_momentum.shape[2]):
 
-                #if k==2 and j==5:
-                #    #print(self.phi_momentum[:,k,0])
-                #    #print(self.phi_momentum[:,k,j])
-                #    print(np.vdot( self.phi_momentum[:,k,0], self.phi_momentum[:,k,j] ))
-
                 self.corrs[len(self.corrs)-1].append( np.vdot( self.phi_momentum[:,k,0], self.phi_momentum[:,k,j] ) )
 
         self.corrs = np.array(self.corrs)
 
         # TODO: not necessary?
         self.corrs = np.absolute(self.corrs)
-
-        #print(self.corrs)
 
 
     def compute_eff_energies(self, eff_en_type):
@@ -188,8 +156,6 @@ class Simulation:
                     raise Exception("Effective energy type not available.")
 
         self.eff_energies = np.array(self.eff_energies)
-
-        #print(self.eff_energies)
 
 
     def plot(self, varname, filename, run_setup):
