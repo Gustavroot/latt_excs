@@ -49,18 +49,18 @@ class Simulation:
 
         phi_val = phi[x,t]
         
-        delta_phi = (phi_val - phi_val_prime)
+        delta_phi = (phi_val_prime - phi_val)
 
-        term1 = ( pow(phi_val,2)-pow(phi_val_prime,2) ) * (pow(self.m,2)/2 + 2)
+        term1 = ( pow(phi_val_prime,2)-pow(phi_val,2) ) * (pow(self.m,2) + 4.0)
         term2 = phi[(x+1)%self.n_s,t]
         term3 = phi[x,(t+1)%self.n_t]
         term4 = phi[(self.n_s+x-1)%self.n_s,t]
         term5 = phi[x,(self.n_t+t-1)%self.n_t]
 
-        delta_S_E = term1 - delta_phi*(term2+term3+term4+term5)
+        delta_S_E = term1 - 2*delta_phi*(term2+term3+term4+term5)
 
         # return S_E' - S_E (new - old)
-        return -delta_S_E
+        return -0.5*delta_S_E
 
 
     def compute_action(self, phi):
@@ -100,22 +100,55 @@ class Simulation:
 
         print("...done.")
 
+        # overall counter
+        w = 0
+
         progr_prev = 0
-        for i in range(mc_steps-burn_in):
-            t = i%self.n_s
-            x = (i/self.n_s)%self.n_t
-            self.run_one_step(x,t)
+        while w<(mc_steps-burn_in):
 
-            # print progress
-            progr = int((float(i) / float(mc_steps-burn_in))*100.0)
-            if progr>0 and progr!=progr_prev and progr%2==0:
-                print(str(progr)+"% ..."),
-                sys.stdout.flush()
-                progr_prev = progr
+            # even
+            for i in range(0,self.n_t*self.n_s,2):
 
-            # save configs
-            if i%skip_length==0:
-                self.phi.append( np.copy(self.phi_buff) )
+                if w>=(mc_steps-burn_in): break
+
+                t = i%self.n_t
+                x = (i/self.n_t)%self.n_s
+                self.run_one_step(x,t)
+
+                # print progress
+                progr = int((float(w) / float(mc_steps-burn_in))*100.0)
+                if progr>0 and progr!=progr_prev and progr%2==0:
+                    print(str(progr)+"% ..."),
+                    sys.stdout.flush()
+                    progr_prev = progr
+
+                # save configs
+                if w%skip_length==0:
+                    self.phi.append( np.copy(self.phi_buff) )
+
+                w+=1
+
+            # odd
+            for i in range(1,self.n_t*self.n_s,2):
+
+                if w>=(mc_steps-burn_in): break
+
+                t = i%self.n_t
+                x = (i/self.n_t)%self.n_s
+                self.run_one_step(x,t)
+
+                # print progress
+                progr = int((float(w) / float(mc_steps-burn_in))*100.0)
+                if progr>0 and progr!=progr_prev and progr%2==0:
+                    print(str(progr)+"% ..."),
+                    sys.stdout.flush()
+                    progr_prev = progr
+
+                # save configs
+                if w%skip_length==0:
+                    self.phi.append( np.copy(self.phi_buff) )
+
+                w+=1
 
         self.phi = np.array(self.phi)
 
@@ -150,6 +183,8 @@ class Simulation:
                 self.corrs[len(self.corrs)-1].append( np.vdot( self.phi_momentum[:,k,0], self.phi_momentum[:,k,j] ) )
 
         self.corrs = np.array(self.corrs)
+        print("")
+        print(self.corrs)
 
         # TODO: not necessary?
         self.corrs = np.absolute(self.corrs)
@@ -159,7 +194,7 @@ class Simulation:
 
         for k in range(self.corrs.shape[0]):
             self.eff_energies.append( [] )
-            for j in range(1,self.corrs.shape[1]-1):
+            for j in range(self.corrs.shape[1]-1):
 
                 if eff_en_type=="exp":
                     self.eff_energies[len(self.eff_energies)-1].append( log( self.corrs[k,j]/self.corrs[k,j+1] ) )
@@ -174,7 +209,7 @@ class Simulation:
     def plot(self, varname, filename, run_setup):
 
         if varname=="corrs":
-            var_to_plot = self.corrs[1,:]
+            var_to_plot = self.corrs[1,1:]
         elif varname=="eff_energies":
             var_to_plot = self.eff_energies[1,:]
         else:
