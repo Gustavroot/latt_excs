@@ -60,7 +60,7 @@ class Simulation:
         delta_S_E = term1 - 2*delta_phi*(term2+term3+term4+term5)
 
         # return S_E' - S_E (new - old)
-        return -0.5*delta_S_E
+        return 0.5*delta_S_E
 
 
     def compute_action(self, phi):
@@ -180,14 +180,15 @@ class Simulation:
             # run over values of time t
             for j in range(self.phi_momentum.shape[2]):
 
-                self.corrs[len(self.corrs)-1].append( np.vdot( self.phi_momentum[:,k,0], self.phi_momentum[:,k,j] ) )
+                self.corrs[len(self.corrs)-1].append( np.vdot( self.phi_momentum[:,k,0], self.phi_momentum[:,k,j] ) / self.phi_momentum[:,k,0].shape[0] )
 
         self.corrs = np.array(self.corrs)
-        print("")
-        print(self.corrs)
+        #print("")
+        #print(self.corrs)
 
         # TODO: not necessary?
-        self.corrs = np.absolute(self.corrs)
+        #self.corrs = np.absolute(self.corrs)
+        self.corrs = np.absolute( np.real(self.corrs) )
 
 
     def compute_eff_energies(self, eff_en_type):
@@ -195,6 +196,7 @@ class Simulation:
         for k in range(self.corrs.shape[0]):
             self.eff_energies.append( [] )
             for j in range(self.corrs.shape[1]-1):
+            #for j in range(self.corrs.shape[1]/2):
 
                 if eff_en_type=="exp":
                     self.eff_energies[len(self.eff_energies)-1].append( log( self.corrs[k,j]/self.corrs[k,j+1] ) )
@@ -209,7 +211,7 @@ class Simulation:
     def plot(self, varname, filename, run_setup):
 
         if varname=="corrs":
-            var_to_plot = self.corrs[1,1:]
+            var_to_plot = self.corrs[1,:]
         elif varname=="eff_energies":
             var_to_plot = self.eff_energies[1,:]
         else:

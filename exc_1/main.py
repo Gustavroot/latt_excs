@@ -20,7 +20,7 @@ sim = Simulation()
 sim.set_params(params)
 
 run_setup = dict()
-run_setup['mc_steps'] = 60000
+run_setup['mc_steps'] = 20000
 run_setup['prior_dist'] = 'gaussian'
 run_setup['prop_dist'] = 'gaussian_all'
 
