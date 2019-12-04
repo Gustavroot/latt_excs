@@ -1,0 +1,16 @@
+
+Parameters of the run:
+	 beta: 1.8
+	 mc_steps: 2003000
+	 burn_in: 3000
+	 skip: 50
+	 effective number of 'independent' configurations: 40000
+
+Time for generation of the Markov Chain: 63.2213158607
+
+Time for computing <P_{avg}>: 38.2697348595
+
+Results for <P_{avg}>:
+	 mean: 0.6593585652978609
+	 standard deviation: 0.06282810951101035
+

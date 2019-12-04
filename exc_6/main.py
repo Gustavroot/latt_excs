@@ -4,59 +4,43 @@ import time
 
 sim_params = dict()
 # either 'ones' or 'random'
-sim_params['gauge_links_init'] = 'ones'
+sim_params['gauge_links_init'] = 'random'
 # using 1+1 for this simulation
 sim_params['spacetime_dim'] = 2
 # T,X,Y,...
-sim_params['latt_size_per_dim'] = [1024,1024]
-sim_params['rnd_seed'] = 4728
+sim_params['latt_size_per_dim'] = [12,12]
+sim_params['rnd_seed'] = 38297
 
 sim = Simulation(sim_params)
 
+# parameters of the run
+run_params = dict()
+run_params['beta'] = 1.8
+run_params['mc_steps'] = 2003000
+run_params['skip'] = 50
+run_params['burn_in'] = 3000
+
+# Generation of the Markov Chain
+
 start = time.time()
-init_action = sim.compute_gauge_action()
-# compute gauge transformation on all links
-sim.full_gauge_transf()
-finl_action = sim.compute_gauge_action()
+# run a Metropolis
+sim.run(run_params)
 end = time.time()
-
-print("")
-print("Action before gauge transf: "+str(init_action))
-print("")
-print("Action after gauge transf: "+str(finl_action))
-print("")
-
 elapsed_time = end-start
+print("")
+print("Time for generation of the Markov Chain: "+str(elapsed_time))
 
-print("Elapsed time: "+str(elapsed_time))
+# Post-processing
 
-
-"""
-
-# OLD TESTS
-
-plaq_point = (0,1,6)
-phase_buff = sim.compute_single_plaquette_phase(plaq_point[0],plaq_point[1],plaq_point[2])
-print("Phase for "+str(plaq_point)+": "+str(phase_buff))
-plaq_buff = sim.compute_plaquette_from_phase(phase_buff)
-print("Plaquette value for "+str(plaq_point)+": "+str(plaq_buff))
-
-# only 'random' allowed for the input param
-sim.init_gauge_transf('random')
-
-# compute gauge transformation on all links
-for i in range(np.prod(sim.latt_size_per_dim)):
-    for mu in range(sim.spacetime_dim):
-        # compute the transformed phase
-        changed_phase = sim.gauge_transf_single_link(mu,i)
-        # change the corresponding link
-        sim.gauge_links[i,mu] = changed_phase
-
-# check if plaquette hasn't changed
-print("Changed phase = "+str(changed_phase))
-plaq_point = (0,1,6)
-phase_buff = sim.compute_single_plaquette_phase(plaq_point[0],plaq_point[1],plaq_point[2])
-changed_plaq = sim.compute_plaquette_from_phase(phase_buff)
-print("Changed plaq: "+str(changed_plaq))
-
-"""
+start = time.time()
+# compute <P_avg>
+plaq_stats = sim.compute_avg_plaq()
+end = time.time()
+elapsed_time = end-start
+print("")
+print("Time for computing <P_{avg}>: "+str(elapsed_time))
+print("")
+print("Results for <P_{avg}>:")
+print("\t mean: "+str(plaq_stats[0]))
+print("\t standard deviation: "+str(plaq_stats[1]))
+print("")
