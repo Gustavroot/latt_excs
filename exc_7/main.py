@@ -22,7 +22,7 @@ for i in range(len(dims_to_sim)):
     sim_params['spacetime_dim'] = 2
     # T,X,Y,...
     sim_params['latt_size_per_dim'] = dims_to_sim[i]
-    sim_params['rnd_seed'] = 3827 + i*62
+    #sim_params['rnd_seed'] = 3827 + i*62
 
     #sim = Simulation(sim_params)
     #sims.append(sim)
