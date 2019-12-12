@@ -7,6 +7,8 @@ from math import cos, exp
 import matplotlib
 import matplotlib.pyplot as plt
 
+import sys
+
 
 # TODO:
 
@@ -287,6 +289,15 @@ class Simulation:
         return phase
 
 
+    def wrap_angle(self):
+
+        for gauge_links in self.MARKOV_CHAIN:
+
+            for idx in range(self.nr_latt_sites):
+                for mu in range(self.spacetime_dim):
+                    gauge_links[idx][mu] = gauge_links[idx][mu]%(2*np.pi)
+
+
     # this method returns S^{gauge}_{E} / \beta, for a given Gauge config
     def compute_gauge_action(self, gauge_links):
 
@@ -295,12 +306,12 @@ class Simulation:
             for nu in range(self.spacetime_dim):
                 for mu in range(nu):
 
-                    #buff_nr = complex(1.0,0.0) - self.compute_plaquette_from_phase( self.compute_single_plaquette_phase(mu,nu,idx) )
-                    #buff_nr = buff_nr.real
+                    buff_nr = complex(1.0,0.0) - self.compute_plaquette_from_phase( self.compute_single_plaquette_phase_gen(mu,nu,idx,gauge_links) )
+                    buff_nr = buff_nr.real
 
                     # take real part directly
                     #buff_nr = 1.0 - cos( self.compute_single_plaquette_phase(mu,nu,idx) )
-                    buff_nr = 1.0 - cos( self.compute_single_plaquette_phase_gen(mu, nu, idx, gauge_links) )
+                    #buff_nr = 1.0 - cos( self.compute_single_plaquette_phase_gen(mu, nu, idx, gauge_links) )
 
                     action += buff_nr
 
@@ -308,12 +319,15 @@ class Simulation:
 
 
     # This return an array with the action computed for ALL Gauge configs
-    def compute_action(self):
+    def compute_action(self, beta):
 
         action_values = []
 
         for i in range(len(self.MARKOV_CHAIN)):
             action_values.append( self.compute_gauge_action(self.MARKOV_CHAIN[i]) )
+
+        action_values = np.array(action_values)
+        action_values *= beta
 
         return action_values
 
@@ -381,6 +395,7 @@ class Simulation:
             raise Exception("ERROR: burn_in can't be greater than mc_steps.")
 
         # burn-in
+        print("Burn-in...")
         for i in range(burn_in):
             idx = i % self.nr_latt_sites
             for mu in range(self.spacetime_dim):
@@ -396,9 +411,12 @@ class Simulation:
                 if u <= accept_prob:
                     # accept
                     self.gauge_links[idx][mu] = changed_phase
+        print("...done.")
 
         self.MARKOV_CHAIN = []
 
+        w = 0
+        progr_prev = 0
         # after thermalization:
         for i in range(mc_steps-burn_in):
             idx = i % self.nr_latt_sites
@@ -427,6 +445,15 @@ class Simulation:
                 #else:
                 #    pass
 
+            # print progress
+            progr = int((float(w) / float(mc_steps-burn_in))*100.0)
+            if progr>0 and progr!=progr_prev and progr%2==0:
+                print(str(progr)+"% ..."),
+                sys.stdout.flush()
+                progr_prev = progr
+            w += 1
+        print("")
+
 
     def compute_topological_charge(self):
 
@@ -439,12 +466,17 @@ class Simulation:
             gauge_links = self.MARKOV_CHAIN[i]
 
             rel_sum = complex(0.0,0.0)
+            #rel_sum = 0.0
             for idx in range(self.nr_latt_sites):
 
                 phase_buff = self.compute_single_plaquette_phase_gen(mu, nu, idx, gauge_links)
                 rel_sum += (cmplx_log(self.compute_plaquette_from_phase( phase_buff )))
 
+                #phase_buff = self.compute_single_plaquette_phase_gen(mu, nu, idx, gauge_links)
+                #rel_sum += phase_buff
+
             Q_values.append(rel_sum.imag)
+            #Q_values.append(rel_sum)
 
         Q_values = np.array(Q_values)
         Q_values /= (2*np.pi)

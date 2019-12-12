@@ -10,7 +10,7 @@ print("\nMARKOV CHAIN GENERATION:\n")
 sims = list()
 
 dims_to_sim = [(12,12), (32,32)]
-betas_to_sim = [1.8, 2.8]
+betas_to_sim = [1.8, 12.8]
 run_params_all = []
 
 for i in range(len(dims_to_sim)):
@@ -32,7 +32,7 @@ for i in range(len(dims_to_sim)):
     run_params = dict()
     run_params['beta'] = betas_to_sim[i]
     run_params['burn_in'] = 3000
-    run_params['mc_steps'] = 2000 + run_params['burn_in']
+    run_params['mc_steps'] = 500000 + run_params['burn_in']
     run_params['skip'] = 50
 
     run_params_all.append(run_params.copy())
@@ -47,19 +47,30 @@ for i in range(len(dims_to_sim)):
 
 # Post-processing
 
-print("\nPOST-PROCESSING:\n")
+print("\nPOST-PROCESSING:")
 
 for i in range(len(sims)):
 
+    # Make all links have their angle from 0 to 2*pi
+    #sims[i].wrap_angle()
+
     print("\nTopological charge for latt = "+str(sims[i].latt_size_per_dim)+"...")
+
+    start = time.time()
     Q = sims[i].compute_topological_charge()
-    #print(Q)
+    end = time.time()
+    elapsed_time = end-start
+    print("Time for computing Q: "+str(elapsed_time))
     sims[i].hist_plot(Q, "Q", run_params_all[i])
     sims[i].simple_plot(Q, "Q", run_params_all[i])
     print("...done.")
 
     print("\nAction for latt = "+str(sims[i].latt_size_per_dim)+"...")
-    action = sims[i].compute_action()
+    start = time.time()
+    action = sims[i].compute_action(run_params_all[i]['beta'])
+    end = time.time()
+    elapsed_time = end-start
+    print("Time for computing the action: "+str(elapsed_time))
     #print(action)
     sims[i].hist_plot(action, "action", run_params_all[i])
     sims[i].simple_plot(action, "action", run_params_all[i])
