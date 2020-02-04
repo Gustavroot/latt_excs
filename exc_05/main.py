@@ -12,6 +12,8 @@ sim_params['rnd_seed'] = 4728
 
 sim = Simulation(sim_params)
 
+sim.set_gauge_links("random")
+
 print("")
 print("Action before gauge transf: "+str(sim.compute_gauge_action()))
 
